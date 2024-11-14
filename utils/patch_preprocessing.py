@@ -109,9 +109,11 @@ def plot_patches(patches_tensor, num_cols=5):
         plt.imshow(patch)
         plt.axis('off')
 
-    plt.tight_layout()
-    st.pyplot(plt)
-    plt.close()
+    col1, col2, col3, col4, col5= st.columns([1,1, 8, 1, 1])
+    with col3:
+        plt.tight_layout()
+        st.pyplot(plt)
+        plt.close()
 
 if __name__ == '__main__':
     image_path = "00c058_0.tif"

@@ -14,6 +14,12 @@ from utils.models.ENB0 import EfficientNetClassifier
 from utils.models.ENB1 import getB1Model
 from utils.models.Swin import getSwinModel
 
+st.set_page_config(
+    page_title="Blood Cloot Classification",
+)
+
+colors = ["#345a6e", "#007581", "#079965", "#8aab27", "#ffa600"]
+
 num_classes = 2
 
 # Initialize the model and move it to the device
@@ -41,59 +47,60 @@ uploaded_image = st.file_uploader("Upload an image (TIFF format)", type=["tiff"]
 st.write("Choose an AI model:")
 col1, col2, col3 = st.columns([1, 1, 3])
 
-model_dict = {
-    'ENB0': {
-        'model': ENB0,
-        'preprocess': patch_preprocessing,
-        'patches': 15,
-        'name': "EfficientNet B0",
-        'val_loss_path': 'utils/viz_data/ENB0/val_loss.npy',
-        'train_loss_path': 'utils/viz_data/ENB0/train_loss.npy',
-        'y_pred_path': 'utils/viz_data/ENB0/y_pred.npy',
-        'y_true_path': 'utils/viz_data/ENB0/y_true.npy'
-    },
-    'ENB1': {
-        'model': getB1Model('models/efficientNet_classifier.pth'),
-        'preprocess': preprocess,
-        'resolution': 512,
-        'name': "EfficientNet B1",
-        'val_loss_path': 'utils/viz_data/ENB1/all_val_lossesNB1.npy',
-        'train_loss_path': 'utils/viz_data/ENB1/all_train_lossesNB1.npy',
-        'y_pred_path': 'utils/viz_data/ENB1/y_predNB1.npy',
-        'y_true_path': 'utils/viz_data/y_trueSimple.npy'
-    },
-    'Swin': {
-        'model': getSwinModel('models/swin_binary_classifier.pth'),
-        'preprocess': preprocess,
-        'resolution': 384,
-        'name': "Swin Transformer",
-        'val_loss_path': 'utils/viz_data/Swin/all_val_lossesSwin.npy',
-        'train_loss_path': 'utils/viz_data/Swin/all_train_lossesSwin.npy',
-        'y_pred_path': 'utils/viz_data/Swin/y_predSwin.npy',
-        'y_true_path': 'utils/viz_data/y_trueSimple.npy'
-    },
-}
+if 'model_dict' not in st.session_state:
+    st.session_state.model_dict = {
+        'ENB0': {
+            'model': ENB0,
+            'preprocess': patch_preprocessing,
+            'patches': 15,
+            'name': "EfficientNet B0",
+            'val_loss_path': 'utils/viz_data/ENB0/val_loss.npy',
+            'train_loss_path': 'utils/viz_data/ENB0/train_loss.npy',
+            'y_pred_path': 'utils/viz_data/ENB0/y_pred.npy',
+            'y_true_path': 'utils/viz_data/ENB0/y_true.npy'
+        },
+        'ENB1': {
+            'model': getB1Model('models/efficientNet_classifier.pth'),
+            'preprocess': preprocess,
+            'resolution': 512,
+            'name': "EfficientNet B1",
+            'val_loss_path': 'utils/viz_data/ENB1/all_val_lossesNB1.npy',
+            'train_loss_path': 'utils/viz_data/ENB1/all_train_lossesNB1.npy',
+            'y_pred_path': 'utils/viz_data/ENB1/y_predNB1.npy',
+            'y_true_path': 'utils/viz_data/y_trueSimple.npy'
+        },
+        'Swin': {
+            'model': getSwinModel('models/swin_binary_classifier.pth'),
+            'preprocess': preprocess,
+            'resolution': 384,
+            'name': "Swin Transformer",
+            'val_loss_path': 'utils/viz_data/Swin/all_val_lossesSwin.npy',
+            'train_loss_path': 'utils/viz_data/Swin/all_train_lossesSwin.npy',
+            'y_pred_path': 'utils/viz_data/Swin/y_predSwin.npy',
+            'y_true_path': 'utils/viz_data/y_trueSimple.npy'
+        },
+    }
 
 # Set default checkbox values based on selected_models in session state
 with col1:
     enb0_selected = 'ENB0' in st.session_state.selected_models
     enb0_checkbox = st.checkbox("EfficientNet B0", value=enb0_selected)
-    if enb0_checkbox != enb0_selected:  # Only call toggle_model if the state changes
+    if enb0_checkbox != enb0_selected:
         toggle_model('ENB0', enb0_checkbox)
 
 with col2:
     enb1_selected = 'ENB1' in st.session_state.selected_models
     enb1_checkbox = st.checkbox("EfficientNet B1", value=enb1_selected)
-    if enb1_checkbox != enb1_selected:  # Only call toggle_model if the state changes
+    if enb1_checkbox != enb1_selected:
         toggle_model('ENB1', enb1_checkbox)
 
 with col3:
     swin_selected = 'Swin' in st.session_state.selected_models
     swin_checkbox = st.checkbox("Swin Transformer", value=swin_selected)
-    if swin_checkbox != swin_selected:  # Only call toggle_model if the state changes
+    if swin_checkbox != swin_selected:
         toggle_model('Swin', swin_checkbox)
 
-if st.button("Submit & Predict"):
+if uploaded_image and st.button("Submit & Predict") and not st.button("View Model Performance"):
     if st.session_state.selected_models:
         processed_models = []
         show = True
@@ -114,15 +121,15 @@ if st.button("Submit & Predict"):
             else:
                 processed_models.append('Patch')
             
-            if show:
-                st.header(f'{processed_models[-1]} Preprocessing Results')
+            if show or model == 'ENB0':
+                st.subheader(f'{processed_models[-1]} Preprocessing Results')
 
             parameter = None
             if model == 'ENB0':
-                parameter = model_dict[model]['patches']
+                parameter = st.session_state.model_dict[model]['patches']
             else:
-                parameter = model_dict[model]['resolution']
-            result = model_dict[model]['preprocess'](temp_path, parameter)
+                parameter = st.session_state.model_dict[model]['resolution']
+            result = st.session_state.model_dict[model]['preprocess'](temp_path, parameter)
 
             if model == 'ENB0':
                 plot_patches(result)
@@ -132,21 +139,21 @@ if st.button("Submit & Predict"):
                 plt.figure(figsize=(5, 5))  # Create a figure with a specified size
                 plt.imshow(result_img, cmap='gray')
                 plt.axis('off')  # Turn off axis labels
-                plt.show()  # Show the plot
-                st.pyplot(plt)
-                plt.close()
+                col1, col2, col3, col4, col5= st.columns([1,1, 8, 1, 1])
+                with col3:
+                    plt.show()  # Show the plot
+                    st.pyplot(plt)
+                    plt.close()
 
             processed_models.append(model)
 
-            st.header(f'{model_dict[model]['name']} Prediction Results')
-
-            if model_dict[model]['name'] == 'EfficientNet B0':
+            if st.session_state.model_dict[model]['name'] == 'EfficientNet B0':
 
                 # Disable gradient computation for inference
                 with torch.no_grad():
                     # Get the model's raw output (logits)
                     result = result.to(torch.float32)
-                    output = model_dict[model]['model'](result)
+                    output = st.session_state.model_dict[model]['model'](result)
 
                     # Apply softmax to get probabilities
                     probabilities = F.softmax(output, dim=1)
@@ -160,7 +167,8 @@ if st.button("Submit & Predict"):
                     most_voted_percentage = (label_counts[most_voted_label] / len(predicted_labels)) * 100
 
                     # Print the most voted label and its percentage
-                    st.subheader(f"Predicted Class: {'LAA' if most_voted_label == 1 else 'CE'} with {most_voted_percentage:.2f}% of the votes")
+                    st.subheader(f'{st.session_state.model_dict[model]['name']}: {'LAA' if most_voted_label == 1 else 'CE'} with {most_voted_percentage:.2f}% of the votes')
+                    #st.markdown(f"#### Predicted Class: {'LAA' if most_voted_label == 1 else 'CE'} with {most_voted_percentage:.2f}% of the votes")
 
                     # Convert patches to a format suitable for display
                     plt.figure(figsize=(8, 5))  # Adjust figure size as needed
@@ -182,13 +190,15 @@ if st.button("Submit & Predict"):
                         plt.title(f'Label: {'LAA' if predicted_labels[i] == 1 else 'CE'}')
                         plt.axis('off')  # Hide the axis
 
-                    plt.tight_layout()
-                    plt.show()
-                    st.pyplot(plt)
-                    plt.close()
+                    col1, col2, col3, col4, col5= st.columns([1,1, 8, 1, 1])
+                    with col3:
+                        plt.tight_layout()
+                        plt.show()
+                        st.pyplot(plt)
+                        plt.close()
 
                 # Set model to train mode for saliency computation
-                model_dict[model]['model'].eval()
+                st.session_state.model_dict[model]['model'].eval()
     
                 # Ensure gradients are enabled for the entire batch (if not already set)
                 result.requires_grad_()
@@ -199,11 +209,11 @@ if st.button("Submit & Predict"):
                 for i in range(result.size(0)):
                     patch = result[i:i+1].clone().detach().requires_grad_(True)  # Explicitly set requires_grad=True for each patch
                     
-                    output = model_dict[model]['model'](patch)
+                    output = st.session_state.model_dict[model]['model'](patch)
                     predicted_class = torch.argmax(output, dim=1).item()
                     predicted_labels.append(predicted_class)
                     
-                    model_dict[model]['model'].zero_grad()
+                    st.session_state.model_dict[model]['model'].zero_grad()
                     output[0, predicted_class].backward()
                     
                     # Check if grad is available for saliency computation
@@ -220,47 +230,52 @@ if st.button("Submit & Predict"):
                 for i in range(15):
                     plt.subplot(3, 5, i + 1)
                     if saliency_maps[i] is not None:
-                        plt.imshow(saliency_maps[i], cmap='hot')
+                        plt.imshow(saliency_maps[i], cmap='viridis')
                         plt.title(f'Label: {"LAA" if predicted_labels[i] == 1 else "CE"}')
                     else:
                         plt.text(0.5, 0.5, "No Grad", ha='center', va='center')
                     
                     plt.axis('off')
 
-                plt.tight_layout()
-                plt.show()
-                st.pyplot(plt)
-                plt.close()
+                col1, col2, col3, col4, col5= st.columns([1,1, 8, 1, 1])
+                with col3:
+                    plt.tight_layout()
+                    plt.show()
+                    st.pyplot(plt)
+                    plt.close()
 
             else:
-                probabilities, saliency = predict(model_dict[model]['model'], result)
+                probabilities, saliency = predict(st.session_state.model_dict[model]['model'], result)
 
-                st.columns(3)[1].subheader(f"{probabilities[0]:.2f}% CE")
-                st.columns(3)[1].subheader(f"{probabilities[1]:.2f}% LAA")
+                #st.columns(3)[1].markdown(f"#### {probabilities[0]:.2f}% CE, {probabilities[1]:.2f}% LAA")
+                st.subheader(f'{st.session_state.model_dict[model]['name']}: {probabilities[0]:.2f}% CE, {probabilities[1]:.2f}% LAA')
 
-                st.subheader("Saliency Map")
+                st.markdown("#### Saliency Map")
                 plt.figure(figsize=(5, 5))
-                plt.imshow(saliency, cmap='hot')
+                plt.imshow(saliency, cmap='viridis')
                 plt.axis('off')
 
-                plt.show()
-                st.pyplot(plt)
-                plt.close()
+                col1, col2, col3, col4, col5= st.columns([1,1, 8, 1, 1])
+                with col3:
+                    plt.tight_layout()
+                    plt.show()
+                    st.pyplot(plt)
+                    plt.close()
 
-elif st.button("View Model Performance"):
+else:
     if st.session_state.selected_models:
         for model in st.session_state.selected_models:
 
-            st.header(f'{model_dict[model]['name']} Performance Overview')
+            st.subheader(f'{st.session_state.model_dict[model]['name']} Performance Overview')
 
-            val_loss = np.load(model_dict[model]['val_loss_path'])
-            train_loss = np.load(model_dict[model]['train_loss_path'])
+            val_loss = np.load(st.session_state.model_dict[model]['val_loss_path'])
+            train_loss = np.load(st.session_state.model_dict[model]['train_loss_path'])
 
             fig = go.Figure()
             epochs = np.arange(1, len(train_loss) + 1)
 
-            fig.add_trace(go.Scatter(x=epochs, y=train_loss, mode='lines+markers', name='Train Loss'))
-            fig.add_trace(go.Scatter(x=epochs, y=val_loss, mode='lines+markers', name='Validation Loss'))
+            fig.add_trace(go.Scatter(x=epochs, y=train_loss, mode='lines+markers', name='Train Loss', line=dict(color=colors[1])))
+            fig.add_trace(go.Scatter(x=epochs, y=val_loss, mode='lines+markers', name='Validation Loss', line=dict(color=colors[4])))
 
             # Customize the layout
             fig.update_layout(
@@ -268,14 +283,14 @@ elif st.button("View Model Performance"):
                 xaxis_title='Epochs',
                 yaxis_title='Loss',
                 hovermode='x unified',
-                template='plotly_dark'  # You can change this to 'plotly', 'ggplot2', etc.
+                template='ggplot2'
             )
 
             # Display the interactive plot in Streamlit
             st.plotly_chart(fig)
 
-            y_true = np.load(model_dict[model]['y_true_path'])
-            y_pred = np.load(model_dict[model]['y_pred_path'])
+            y_true = np.load(st.session_state.model_dict[model]['y_true_path'])
+            y_pred = np.load(st.session_state.model_dict[model]['y_pred_path'])
 
             # Calculate confusion matrix
             cm = confusion_matrix(y_true, y_pred)
@@ -299,5 +314,3 @@ elif st.button("View Model Performance"):
 
             # Display the interactive plot in Streamlit
             st.plotly_chart(fig, use_container_width=True)
-
-
