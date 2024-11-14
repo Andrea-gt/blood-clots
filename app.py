@@ -68,6 +68,8 @@ with col3:
 
 if st.button("Submit & Predict"):
     if st.session_state.selected_models:
+        processed_models = []
+        show = True
 
         temp_path = None
 
@@ -78,7 +80,16 @@ if st.button("Submit & Predict"):
                 temp_path = temp_file.name
 
         for model in st.session_state.selected_models:
-            st.subheader(f'{model_dict[model]['name']} Preprocessing Results')
+            if model != 'ENB0:
+                if 'Simple' in processed_models:
+                    show = False
+                processed_models.append('Simple')
+            else:
+                processed_models.append('Patch')
+            
+            if show:
+                st.subheader(f'{processed_models[-1]} Preprocessing Results')
+
             parameter = None
             if model == 'ENB0':
                 parameter = model_dict[model]['patches']
@@ -89,13 +100,15 @@ if st.button("Submit & Predict"):
             if model == 'ENB0':
                 plot_patches(result)
 
-            else:
+            elif show:
                 plt.figure(figsize=(5, 5))  # Create a figure with a specified size
                 plt.imshow(result, cmap='gray')
                 plt.axis('off')  # Turn off axis labels
                 plt.show()  # Show the plot
                 st.pyplot(plt)
                 plt.close()
+
+            processed_models.append(model)
 
 
 
