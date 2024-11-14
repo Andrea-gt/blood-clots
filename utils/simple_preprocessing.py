@@ -1,3 +1,8 @@
+from openslide import OpenSlide
+import numpy as np
+import cv2
+import tensorflow as tf
+
 def preprocess(image_path, resolution):
     slide = OpenSlide(image_path)
     region = (1000, 1000)    
