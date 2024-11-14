@@ -1,7 +1,10 @@
 import tempfile
+import numpy as np
 from PIL import Image
 import streamlit as st
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from sklearn.metrics import confusion_matrix
 import torch
 import torch.nn.functional as F
 
@@ -9,6 +12,7 @@ from utils.simple_preprocessing import preprocess, predict
 from utils.patch_preprocessing import patch_preprocessing, plot_patches
 from utils.models.ENB0 import EfficientNetClassifier
 from utils.models.ENB1 import getB1Model
+from utils.models.Swin import getSwinModel
 
 num_classes = 2
 
@@ -42,19 +46,31 @@ model_dict = {
         'model': ENB0,
         'preprocess': patch_preprocessing,
         'patches': 15,
-        'name': "EfficientNet B0"
+        'name': "EfficientNet B0",
+        'val_loss_path': 'utils/viz_data/ENB0/val_loss.npy',
+        'train_loss_path': 'utils/viz_data/ENB0/train_loss.npy',
+        'y_pred_path': 'utils/viz_data/ENB0/y_pred.npy',
+        'y_true_path': 'utils/viz_data/ENB0/y_true.npy'
     },
     'ENB1': {
         'model': getB1Model('models/efficientNet_classifier.pth'),
         'preprocess': preprocess,
         'resolution': 512,
-        'name': "EfficientNet B1"
+        'name': "EfficientNet B1",
+        'val_loss_path': 'utils/viz_data/ENB1/all_val_lossesNB1.npy',
+        'train_loss_path': 'utils/viz_data/ENB1/all_train_lossesNB1.npy',
+        'y_pred_path': 'utils/viz_data/ENB1/y_predNB1.npy',
+        'y_true_path': 'utils/viz_data/y_trueSimple.npy'
     },
     'Swin': {
-        'model': None,
+        'model': getSwinModel('models/swin_binary_classifier.pth'),
         'preprocess': preprocess,
         'resolution': 384,
-        'name': "Swin Transformer"
+        'name': "Swin Transformer",
+        'val_loss_path': 'utils/viz_data/Swin/all_val_lossesSwin.npy',
+        'train_loss_path': 'utils/viz_data/Swin/all_train_lossesSwin.npy',
+        'y_pred_path': 'utils/viz_data/Swin/y_predSwin.npy',
+        'y_true_path': 'utils/viz_data/y_trueSimple.npy'
     },
 }
 
@@ -231,5 +247,57 @@ if st.button("Submit & Predict"):
                 st.pyplot(plt)
                 plt.close()
 
+elif st.button("View Model Performance"):
+    if st.session_state.selected_models:
+        for model in st.session_state.selected_models:
+
+            st.header(f'{model_dict[model]['name']} Performance Overview')
+
+            val_loss = np.load(model_dict[model]['val_loss_path'])
+            train_loss = np.load(model_dict[model]['train_loss_path'])
+
+            fig = go.Figure()
+            epochs = np.arange(1, len(train_loss) + 1)
+
+            fig.add_trace(go.Scatter(x=epochs, y=train_loss, mode='lines+markers', name='Train Loss'))
+            fig.add_trace(go.Scatter(x=epochs, y=val_loss, mode='lines+markers', name='Validation Loss'))
+
+            # Customize the layout
+            fig.update_layout(
+                title='Model Training and Validation Loss',
+                xaxis_title='Epochs',
+                yaxis_title='Loss',
+                hovermode='x unified',
+                template='plotly_dark'  # You can change this to 'plotly', 'ggplot2', etc.
+            )
+
+            # Display the interactive plot in Streamlit
+            st.plotly_chart(fig)
+
+            y_true = np.load(model_dict[model]['y_true_path'])
+            y_pred = np.load(model_dict[model]['y_pred_path'])
+
+            # Calculate confusion matrix
+            cm = confusion_matrix(y_true, y_pred)
+
+            # Create an interactive heatmap with Plotly
+            fig = go.Figure(data=go.Heatmap(
+                z=cm,
+                x=['Predicted CE', 'Predicted LAA'],
+                y=['Actual CE', 'Actual LAA'],
+                hoverongaps=True,
+                colorscale='Blues'
+            ))
+
+            # Update layout for better clarity
+            fig.update_layout(
+                title='Confusion Matrix',
+                xaxis_title='Predicted Label',
+                yaxis_title='True Label',
+                template='plotly_dark'
+            )
+
+            # Display the interactive plot in Streamlit
+            st.plotly_chart(fig, use_container_width=True)
 
 
