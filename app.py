@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 
-from utils.simple_preprocessing import preprocess
+from utils.simple_preprocessing import preprocess, predict
 from utils.patch_preprocessing import patch_preprocessing, plot_patches
 from utils.models.ENB0 import EfficientNetClassifier
+from utils.models.ENB1 import getB1Model
 
 num_classes = 2
 
@@ -44,7 +45,7 @@ model_dict = {
         'name': "EfficientNet B0"
     },
     'ENB1': {
-        'model': None,
+        'model': getB1Model('models/efficientNet_classifier.pth'),
         'preprocess': preprocess,
         'resolution': 512,
         'name': "EfficientNet B1"
@@ -111,8 +112,9 @@ if st.button("Submit & Predict"):
                 plot_patches(result)
 
             elif show:
+                result_img = result.squeeze(0).permute(1, 2, 0).cpu().numpy()
                 plt.figure(figsize=(5, 5))  # Create a figure with a specified size
-                plt.imshow(result, cmap='gray')
+                plt.imshow(result_img, cmap='gray')
                 plt.axis('off')  # Turn off axis labels
                 plt.show()  # Show the plot
                 st.pyplot(plt)
@@ -120,9 +122,9 @@ if st.button("Submit & Predict"):
 
             processed_models.append(model)
 
-            if model_dict[model]['model']:
+            st.header(f'{model_dict[model]['name']} Prediction Results')
 
-                st.header(f'{model_dict[model]['name']} Prediction Results')
+            if model_dict[model]['name'] == 'EfficientNet B0':
 
                 # Disable gradient computation for inference
                 with torch.no_grad():
@@ -214,7 +216,20 @@ if st.button("Submit & Predict"):
                 st.pyplot(plt)
                 plt.close()
 
+            else:
+                probabilities, saliency = predict(model_dict[model]['model'], result)
 
+                st.columns(3)[1].subheader(f"{probabilities[0]:.2f}% CE")
+                st.columns(3)[1].subheader(f"{probabilities[1]:.2f}% LAA")
+
+                st.subheader("Saliency Map")
+                plt.figure(figsize=(5, 5))
+                plt.imshow(saliency, cmap='hot')
+                plt.axis('off')
+
+                plt.show()
+                st.pyplot(plt)
+                plt.close()
 
 
 
